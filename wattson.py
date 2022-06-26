@@ -4,12 +4,37 @@ import sys, time, syslog, serial, urllib3, requests
 ################################################
 # Send Message to VMware LogInsight via REST API
 ################################################
-def sendMsgToLogInsight(ip,msg):
+# ip - LogInsight IP address or Host name
+# msg - log message
+# fields - Log Insight fields in JSON array
+#          Example:
+#          [
+#             {
+#               "name":"id",
+#               "content":"bbdd1dda8f"
+#             },
+#             {
+#               "name":"container",
+#               "content":"/vigilant_goldberg"
+#             }
+#          ]
+
+def sendMsgToLogInsight(ip,msg,fields=[]):
   api_url = "https://" + ip + ":9543/api/v1/events/ingest/1"
-  json_msg = {"events": [{"text": msg }]}
+  json_events = {
+                  "events":
+                    [
+                      {
+                        "text": msg,
+                        "fields": fields
+                      }
+                    ]
+                }
   urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-  response = requests.post(api_url, json=json_msg, verify=False)
+  response = requests.post(api_url, json=json_events, verify=False)
   return response
+
+
 
 ###########################################################
 # Send command to serial device
@@ -101,8 +126,6 @@ def main():
     for p in power:
       power_sum += p
     power_avg = round(power_sum / len(power),0)
-
-    print("Average power consumptin for last ~1 min: ",power_avg)
 
     # Send to LogInsight
     log_message = "Wattson Average Power Consumption for last ~1 min: " + str(power_avg) + " Watt"
